@@ -28,7 +28,7 @@ BASE_URL = os.getenv(
 SYMBOL = os.getenv("DELTA_SYMBOL", "BTCUSD")
 PRODUCT_ID = int(os.getenv("DELTA_PRODUCT_ID", "27"))
 
-TIMEFRAME = "1m"
+TIMEFRAME = "1h"
 CANDLE_SECONDS = 3600
 
 ATR_PERIOD = 10
@@ -1117,7 +1117,7 @@ if df.empty:
 
 
 # ============================================================
-# ONLY COMPLETED 1-MINUTE CANDLES
+# ONLY COMPLETED 1-hour CANDLES
 # ============================================================
 
 current_candle_start = (
