@@ -100,7 +100,7 @@ st.set_page_config(
 st.title("📈 SANJAY RANA — REAL TRADING DASHBOARD")
 
 st.caption(
-    "1 Minute | ATR 10 | Multiplier 3.0 | HL2 | "
+    "1 Hour | ATR 10 | Multiplier 3.0 | HL2 | "
     "Confirmed Candle Close"
 )
 
