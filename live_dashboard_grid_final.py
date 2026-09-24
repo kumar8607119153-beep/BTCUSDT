@@ -1139,12 +1139,12 @@ if len(df) < ATR_PERIOD + 5:
 # ============================================================
 # STANDARD TRADINGVIEW SUPERTREND 10,3 ENGINE
 # ============================================================
-# Reference chart: regular Delta BTCUSD 1-minute candles,
+# Reference chart: regular Delta BTCUSD 1-hour se candles,
 # SuperTrend 10 3, Source = HL2.
 #
 # This is NOT Heikin-Ashi.
 # ATR = TradingView-style Wilder/RMA.
-# Only completed 1-minute Delta candles reach this engine.
+# Only completed 1-hour Delta candles reach this engine.
 # ============================================================
 
 prev_close = df["close"].shift(1)
