@@ -28,8 +28,8 @@ BASE_URL = os.getenv(
 SYMBOL = os.getenv("DELTA_SYMBOL", "BTCUSD")
 PRODUCT_ID = int(os.getenv("DELTA_PRODUCT_ID", "27"))
 
-TIMEFRAME = "1m"
-CANDLE_SECONDS = 60
+TIMEFRAME = "60m"
+CANDLE_SECONDS = 3600
 
 ATR_PERIOD = 10
 MULTIPLIER = 3.0
@@ -2113,7 +2113,7 @@ components.html(
         "autosize": false,
         "height": 700,
         "symbol": "BINANCE:BTCUSDT",
-        "interval": "1",
+        "interval": "60",
         "timezone": "Asia/Kolkata",
         "theme": "dark",
         "style": "1",
