@@ -4089,3 +4089,1718 @@ def update_grid_engines():
 # ============================================================
 
 PART_3_READY = True
+
+# ============================================================
+# DELTA BTCUSD FUTURES GRID BOT
+# PART 4 OF 4
+# DASHBOARD + TWO SEPARATE CHARTS + AUTO REFRESH
+# ============================================================
+
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+
+# ============================================================
+# DASHBOARD CSS
+# ============================================================
+
+st.markdown(
+    """
+    <style>
+
+    .main-title {
+        font-size: 34px;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 5px;
+    }
+
+    .sub-title {
+        font-size: 18px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .signal-buy {
+        font-size: 32px;
+        font-weight: 900;
+        text-align: center;
+        padding: 12px;
+        border-radius: 10px;
+        background: #123d20;
+        color: #00ff66;
+    }
+
+    .signal-sell {
+        font-size: 32px;
+        font-weight: 900;
+        text-align: center;
+        padding: 12px;
+        border-radius: 10px;
+        background: #4a1111;
+        color: #ff3333;
+    }
+
+    .info-box {
+        padding: 12px;
+        border-radius: 10px;
+        background: #151515;
+        margin-bottom: 8px;
+    }
+
+    .big-number {
+        font-size: 24px;
+        font-weight: 800;
+    }
+
+    .small-label {
+        font-size: 13px;
+        opacity: 0.75;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# TITLE
+# ============================================================
+
+st.markdown(
+    '<div class="main-title">'
+    'SANJAY RANA — DELTA FUTURES GRID BOT'
+    '</div>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<div class="sub-title">'
+    'BTCUSD • 1 HOUR • SUPERTREND 10,2 • HL2'
+    '</div>',
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# LOAD BOT DATA
+# ============================================================
+
+try:
+
+    BOT_DATA = update_grid_engines()
+
+except Exception as exc:
+
+    st.error(
+        f"Bot update error: {exc}"
+    )
+
+    BOT_DATA = {
+
+        "market": {
+            "data":
+                pd.DataFrame(),
+
+            "state":
+                None,
+
+            "last_signal":
+                None,
+        },
+
+        "signal":
+            None,
+
+        "price":
+            None,
+
+        "main":
+            None,
+
+        "sub":
+            None,
+
+        "main_orders":
+            [],
+
+        "sub_orders":
+            [],
+    }
+
+
+# ============================================================
+# MARKET DATA
+# ============================================================
+
+MARKET_DATA = BOT_DATA.get(
+    "market",
+    {},
+)
+
+CANDLE_DF = MARKET_DATA.get(
+    "data",
+    pd.DataFrame(),
+)
+
+CURRENT_PRICE = BOT_DATA.get(
+    "price"
+)
+
+
+SIGNAL_INFO = BOT_DATA.get(
+    "signal"
+)
+
+
+if SIGNAL_INFO:
+
+    CURRENT_SIGNAL = SIGNAL_INFO.get(
+        "signal"
+    )
+
+    SIGNAL_TIME = SIGNAL_INFO.get(
+        "signal_time"
+    )
+
+    SUPERTREND_PRICE = SIGNAL_INFO.get(
+        "supertrend_price"
+    )
+
+else:
+
+    state = MARKET_DATA.get(
+        "state"
+    )
+
+
+    if state:
+
+        CURRENT_SIGNAL = state.get(
+            "direction"
+        )
+
+        SIGNAL_TIME = state.get(
+            "candle_time"
+        )
+
+        SUPERTREND_PRICE = state.get(
+            "supertrend"
+        )
+
+    else:
+
+        CURRENT_SIGNAL = None
+
+        SIGNAL_TIME = None
+
+        SUPERTREND_PRICE = None
+
+
+# ============================================================
+# SIGNAL HEADER
+# ============================================================
+
+if CURRENT_SIGNAL == "BUY":
+
+    st.markdown(
+        '<div class="signal-buy">'
+        '🟢 CURRENT SUPERTREND: BUY'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+elif CURRENT_SIGNAL == "SELL":
+
+    st.markdown(
+        '<div class="signal-sell">'
+        '🔴 CURRENT SUPERTREND: SELL'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+else:
+
+    st.info(
+        "Supertrend signal available नहीं है."
+    )
+
+
+# ============================================================
+# SIGNAL INFORMATION
+# ============================================================
+
+signal_col1, signal_col2, signal_col3 = (
+    st.columns(3)
+)
+
+
+with signal_col1:
+
+    st.metric(
+        "CURRENT BTCUSD",
+        (
+            f"{CURRENT_PRICE:,.2f}"
+            if CURRENT_PRICE is not None
+            else "-"
+        ),
+    )
+
+
+with signal_col2:
+
+    st.metric(
+        "SUPERTREND / GRID BASE",
+        (
+            f"{SUPERTREND_PRICE:,.2f}"
+            if SUPERTREND_PRICE is not None
+            else "-"
+        ),
+    )
+
+
+with signal_col3:
+
+    if SIGNAL_TIME is not None:
+
+        try:
+
+            signal_time_text = (
+                pd.Timestamp(
+                    SIGNAL_TIME
+                )
+                .tz_convert(
+                    "Asia/Kolkata"
+                )
+                .strftime(
+                    "%d-%m-%Y %H:%M:%S IST"
+                )
+            )
+
+        except Exception:
+
+            signal_time_text = str(
+                SIGNAL_TIME
+            )
+
+    else:
+
+        signal_time_text = "-"
+
+
+    st.metric(
+        "SIGNAL TIME",
+        signal_time_text,
+    )
+
+
+# ============================================================
+# FORMAT PRICE
+# ============================================================
+
+def fmt_price(value):
+
+    if value is None:
+
+        return "-"
+
+    try:
+
+        return f"{float(value):,.2f}"
+
+    except Exception:
+
+        return str(value)
+
+
+# ============================================================
+# FORMAT BTC
+# ============================================================
+
+def fmt_btc(value):
+
+    if value is None:
+
+        return "-"
+
+    try:
+
+        return f"{float(value):.3f} BTC"
+
+    except Exception:
+
+        return str(value)
+
+
+# ============================================================
+# ACCOUNT SUMMARY
+# ============================================================
+
+def show_account_summary(
+    title,
+    snapshot,
+):
+
+    st.markdown(
+        f"## {title}"
+    )
+
+
+    if not snapshot:
+
+        st.warning(
+            f"{title}: data available नहीं है."
+        )
+
+        return
+
+
+    direction = snapshot.get(
+        "direction"
+    )
+
+
+    if direction == "LONG":
+
+        direction_text = "🟢 LONG"
+
+    elif direction == "SHORT":
+
+        direction_text = "🔴 SHORT"
+
+    else:
+
+        direction_text = "-"
+
+
+    col1, col2, col3, col4 = (
+        st.columns(4)
+    )
+
+
+    with col1:
+
+        st.metric(
+            "DIRECTION",
+            direction_text,
+        )
+
+
+    with col2:
+
+        st.metric(
+            "GRID BASE",
+            fmt_price(
+                snapshot.get(
+                    "base_price"
+                )
+            ),
+        )
+
+
+    with col3:
+
+        st.metric(
+            "GRID DISTANCE",
+            fmt_price(
+                snapshot.get(
+                    "grid_distance"
+                )
+            ),
+        )
+
+
+    with col4:
+
+        st.metric(
+            "LEVERAGE",
+            (
+                f"{MAIN_LEVERAGE}x"
+                if title.startswith("MAIN")
+                else f"{SUB_LEVERAGE}x"
+            ),
+        )
+
+
+    col5, col6, col7, col8 = (
+        st.columns(4)
+    )
+
+
+    with col5:
+
+        st.metric(
+            "GRID RANGE",
+            fmt_price(
+                snapshot.get(
+                    "grid_range"
+                )
+            ),
+        )
+
+
+    with col6:
+
+        st.metric(
+            "GRID QUANTITY",
+            str(
+                snapshot.get(
+                    "grid_quantity",
+                    "-"
+                )
+            ),
+        )
+
+
+    with col7:
+
+        st.metric(
+            "ORDER QTY",
+            fmt_btc(
+                snapshot.get(
+                    "order_qty_btc"
+                )
+            ),
+        )
+
+
+    with col8:
+
+        st.metric(
+            "ORDER CONTRACTS",
+            str(
+                snapshot.get(
+                    "order_contracts",
+                    "-"
+                )
+            ),
+        )
+
+
+    col9, col10, col11, col12 = (
+        st.columns(4)
+    )
+
+
+    with col9:
+
+        st.metric(
+            "LOWER PRICE",
+            fmt_price(
+                snapshot.get(
+                    "lower_price"
+                )
+            ),
+        )
+
+
+    with col10:
+
+        st.metric(
+            "UPPER PRICE",
+            fmt_price(
+                snapshot.get(
+                    "upper_price"
+                )
+            ),
+        )
+
+
+    with col11:
+
+        st.metric(
+            "POSITION",
+            fmt_btc(
+                snapshot.get(
+                    "position_size"
+                )
+            ),
+        )
+
+
+    with col12:
+
+        st.metric(
+            "POSITION ENTRY",
+            fmt_price(
+                snapshot.get(
+                    "position_entry"
+                )
+            ),
+        )
+
+
+    col13, col14, col15, col16 = (
+        st.columns(4)
+    )
+
+
+    with col13:
+
+        st.metric(
+            "REALIZED P&L",
+            fmt_price(
+                snapshot.get(
+                    "realized_pnl"
+                )
+            ),
+        )
+
+
+    with col14:
+
+        st.metric(
+            "UNREALIZED P&L",
+            fmt_price(
+                snapshot.get(
+                    "unrealized_pnl"
+                )
+            ),
+        )
+
+
+    with col15:
+
+        st.metric(
+            "PENDING ENTRIES",
+            str(
+                snapshot.get(
+                    "pending_entries",
+                    0
+                )
+            ),
+        )
+
+
+    with col16:
+
+        st.metric(
+            "PENDING TARGETS",
+            str(
+                snapshot.get(
+                    "pending_targets",
+                    0
+                )
+            ),
+        )
+
+
+# ============================================================
+# ACCOUNT SNAPSHOTS
+# ============================================================
+
+MAIN_SNAPSHOT = BOT_DATA.get(
+    "main"
+)
+
+SUB_SNAPSHOT = BOT_DATA.get(
+    "sub"
+)
+
+
+show_account_summary(
+    "MAIN ACCOUNT",
+    MAIN_SNAPSHOT,
+)
+
+
+st.divider()
+
+
+show_account_summary(
+    "SUB ACCOUNT",
+    SUB_SNAPSHOT,
+)
+
+
+# ============================================================
+# CHART FUNCTION
+# ============================================================
+
+def create_account_chart(
+    df,
+    engine,
+    current_price,
+    account_title,
+):
+
+    fig = make_subplots(
+        rows=1,
+        cols=1,
+    )
+
+
+    if df is None or df.empty:
+
+        fig.update_layout(
+            title=account_title
+        )
+
+        return fig
+
+
+    chart_df = df.tail(
+        180
+    ).copy()
+
+
+    # ========================================================
+    # CANDLESTICKS
+    # ========================================================
+
+    fig.add_trace(
+
+        go.Candlestick(
+
+            x=chart_df[
+                "datetime"
+            ],
+
+            open=chart_df[
+                "open"
+            ],
+
+            high=chart_df[
+                "high"
+            ],
+
+            low=chart_df[
+                "low"
+            ],
+
+            close=chart_df[
+                "close"
+            ],
+
+            name="BTCUSD",
+        )
+
+    )
+
+
+    # ========================================================
+    # SUPERTREND
+    # ========================================================
+
+    buy_st = chart_df.copy()
+
+    sell_st = chart_df.copy()
+
+
+    buy_st.loc[
+        buy_st[
+            "supertrend_direction"
+        ] >= 0,
+        "supertrend"
+    ] = np.nan
+
+
+    sell_st.loc[
+        sell_st[
+            "supertrend_direction"
+        ] <= 0,
+        "supertrend"
+    ] = np.nan
+
+
+    fig.add_trace(
+
+        go.Scatter(
+
+            x=buy_st[
+                "datetime"
+            ],
+
+            y=buy_st[
+                "supertrend"
+            ],
+
+            mode="lines",
+
+            name="BUY SUPERTREND",
+
+            line=dict(
+                width=3,
+            ),
+        )
+
+    )
+
+
+    fig.add_trace(
+
+        go.Scatter(
+
+            x=sell_st[
+                "datetime"
+            ],
+
+            y=sell_st[
+                "supertrend"
+            ],
+
+            mode="lines",
+
+            name="SELL SUPERTREND",
+
+            line=dict(
+                width=3,
+            ),
+        )
+
+    )
+
+
+    # ========================================================
+    # GRID LINES
+    # ========================================================
+
+    if engine is not None:
+
+        for index, price in enumerate(
+            engine.grid_prices
+        ):
+
+            price = float(price)
+
+
+            # ------------------------------------------------
+            # Determine line type
+            # ------------------------------------------------
+
+            if engine.direction == "LONG":
+
+                if (
+                    current_price is not None
+                    and
+                    price < current_price
+                ):
+
+                    line_name = (
+                        f"BUY GRID {index}"
+                    )
+
+                else:
+
+                    line_name = (
+                        f"TARGET {index}"
+                    )
+
+            else:
+
+                if (
+                    current_price is not None
+                    and
+                    price > current_price
+                ):
+
+                    line_name = (
+                        f"SELL GRID {index}"
+                    )
+
+                else:
+
+                    line_name = (
+                        f"TARGET {index}"
+                    )
+
+
+            fig.add_hline(
+
+                y=price,
+
+                line_width=1,
+
+                annotation_text=(
+                    f"{line_name} "
+                    f"@ {price:,.2f}"
+                ),
+
+                annotation_position=(
+                    "right"
+                ),
+            )
+
+
+    # ========================================================
+    # GRID BASE
+    # ========================================================
+
+    if engine is not None:
+
+        if engine.base_price is not None:
+
+            fig.add_hline(
+
+                y=float(
+                    engine.base_price
+                ),
+
+                line_width=4,
+
+                annotation_text=(
+                    "SUPERTREND GRID BASE "
+                    f"@ "
+                    f"{engine.base_price:,.2f}"
+                ),
+
+                annotation_position="left",
+            )
+
+
+    # ========================================================
+    # CURRENT PRICE
+    # ========================================================
+
+    if current_price is not None:
+
+        fig.add_hline(
+
+            y=float(
+                current_price
+            ),
+
+            line_width=3,
+
+            annotation_text=(
+                "LIVE PRICE "
+                f"{current_price:,.2f}"
+            ),
+
+            annotation_position="left",
+        )
+
+
+    # ========================================================
+    # POSITION ENTRY
+    # ========================================================
+
+    if (
+        engine is not None
+        and
+        engine.position_entry is not None
+    ):
+
+        fig.add_hline(
+
+            y=float(
+                engine.position_entry
+            ),
+
+            line_width=3,
+
+            annotation_text=(
+                "ENTRY "
+                f"{engine.position_entry:,.2f}"
+            ),
+
+            annotation_position="right",
+        )
+
+
+    # ========================================================
+    # FILLED ORDERS
+    # ========================================================
+
+    if engine is not None:
+
+        for key, order in (
+            engine.filled_orders.items()
+        ):
+
+            fill_price = order.get(
+                "fill_price"
+            )
+
+
+            if fill_price is None:
+
+                continue
+
+
+            side = str(
+                order.get(
+                    "side",
+                    ""
+                )
+            ).upper()
+
+
+            qty = order.get(
+                "filled_qty_btc",
+                order.get(
+                    "qty_btc",
+                    0
+                ),
+            )
+
+
+            fig.add_hline(
+
+                y=float(
+                    fill_price
+                ),
+
+                line_width=4,
+
+                annotation_text=(
+                    f"FILLED {side} "
+                    f"@ {float(fill_price):,.2f} "
+                    f"| {float(qty):.3f} BTC"
+                ),
+
+                annotation_position="left",
+            )
+
+
+    # ========================================================
+    # TARGETS
+    # ========================================================
+
+    if engine is not None:
+
+        for target in (
+            engine.targets.values()
+        ):
+
+            if target.get(
+                "status"
+            ) != "PENDING":
+
+                continue
+
+
+            target_price = target.get(
+                "price"
+            )
+
+
+            if target_price is None:
+
+                continue
+
+
+            fig.add_hline(
+
+                y=float(
+                    target_price
+                ),
+
+                line_width=3,
+
+                annotation_text=(
+                    "TARGET "
+                    f"@ {float(target_price):,.2f} "
+                    f"| "
+                    f"{float(target.get('qty_btc', 0)):.3f} BTC"
+                ),
+
+                annotation_position="right",
+            )
+
+
+    # ========================================================
+    # LAYOUT
+    # ========================================================
+
+    fig.update_layout(
+
+        title={
+            "text":
+                account_title,
+            "x":
+                0.5,
+        },
+
+        height=720,
+
+        template="plotly_dark",
+
+        xaxis_rangeslider_visible=False,
+
+        hovermode="x unified",
+
+        margin=dict(
+            l=20,
+            r=180,
+            t=70,
+            b=30,
+        ),
+
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+        ),
+    )
+
+
+    fig.update_xaxes(
+        showgrid=True,
+    )
+
+
+    fig.update_yaxes(
+        showgrid=True,
+        fixedrange=False,
+    )
+
+
+    return fig
+
+
+# ============================================================
+# MAIN ACCOUNT CHART
+# ============================================================
+
+st.markdown(
+    "## 🟢 MAIN ACCOUNT CHART"
+)
+
+
+MAIN_CHART = create_account_chart(
+
+    CANDLE_DF,
+
+    MAIN_ENGINE,
+
+    CURRENT_PRICE,
+
+    "MAIN ACCOUNT — BTCUSD 1H GRID",
+)
+
+
+st.plotly_chart(
+    MAIN_CHART,
+    use_container_width=True,
+    key="main_account_chart",
+)
+
+
+# ============================================================
+# MAIN ORDERS
+# ============================================================
+
+st.markdown(
+    "### MAIN ACCOUNT — ORDER STATUS"
+)
+
+
+def engine_orders_dataframe(
+    engine,
+):
+
+    rows = []
+
+
+    if engine is None:
+
+        return pd.DataFrame()
+
+
+    for key, order in (
+        engine.orders.items()
+    ):
+
+        rows.append(
+
+            {
+
+                "TYPE":
+                    order.get(
+                        "type",
+                        ""
+                    ),
+
+                "SIDE":
+                    str(
+                        order.get(
+                            "side",
+                            ""
+                        )
+                    ).upper(),
+
+                "PRICE":
+                    order.get(
+                        "price"
+                    ),
+
+                "QTY BTC":
+                    order.get(
+                        "qty_btc"
+                    ),
+
+                "CONTRACTS":
+                    order.get(
+                        "contracts"
+                    ),
+
+                "STATUS":
+                    order.get(
+                        "status"
+                    ),
+
+                "CLIENT ORDER ID":
+                    order.get(
+                        "client_order_id"
+                    ),
+            }
+        )
+
+
+    for key, target in (
+        engine.targets.items()
+    ):
+
+        rows.append(
+
+            {
+
+                "TYPE":
+                    "TARGET",
+
+                "SIDE":
+                    str(
+                        target.get(
+                            "side",
+                            ""
+                        )
+                    ).upper(),
+
+                "PRICE":
+                    target.get(
+                        "price"
+                    ),
+
+                "QTY BTC":
+                    target.get(
+                        "qty_btc"
+                    ),
+
+                "CONTRACTS":
+                    target.get(
+                        "contracts"
+                    ),
+
+                "STATUS":
+                    target.get(
+                        "status"
+                    ),
+
+                "CLIENT ORDER ID":
+                    target.get(
+                        "client_order_id"
+                    ),
+            }
+        )
+
+
+    if not rows:
+
+        return pd.DataFrame()
+
+
+    return pd.DataFrame(
+        rows
+    )
+
+
+MAIN_ORDER_DF = (
+    engine_orders_dataframe(
+        MAIN_ENGINE
+    )
+)
+
+
+if not MAIN_ORDER_DF.empty:
+
+    st.dataframe(
+        MAIN_ORDER_DF,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+else:
+
+    st.info(
+        "MAIN account में अभी order state नहीं है."
+    )
+
+
+# ============================================================
+# SUB ACCOUNT CHART
+# ============================================================
+
+st.divider()
+
+
+st.markdown(
+    "## 🔴 SUB ACCOUNT CHART"
+)
+
+
+SUB_CHART = create_account_chart(
+
+    CANDLE_DF,
+
+    SUB_ENGINE,
+
+    CURRENT_PRICE,
+
+    "SUB ACCOUNT — BTCUSD 1H GRID",
+)
+
+
+st.plotly_chart(
+    SUB_CHART,
+    use_container_width=True,
+    key="sub_account_chart",
+)
+
+
+# ============================================================
+# SUB ORDERS
+# ============================================================
+
+st.markdown(
+    "### SUB ACCOUNT — ORDER STATUS"
+)
+
+
+SUB_ORDER_DF = (
+    engine_orders_dataframe(
+        SUB_ENGINE
+    )
+)
+
+
+if not SUB_ORDER_DF.empty:
+
+    st.dataframe(
+        SUB_ORDER_DF,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+else:
+
+    st.info(
+        "SUB account में अभी order state नहीं है."
+    )
+
+
+# ============================================================
+# EXCHANGE ACCOUNT INFORMATION
+# ============================================================
+
+st.divider()
+
+
+st.markdown(
+    "## DELTA EXCHANGE ACCOUNT STATUS"
+)
+
+
+main_status_col, sub_status_col = (
+    st.columns(2)
+)
+
+
+# ============================================================
+# MAIN EXCHANGE STATUS
+# ============================================================
+
+with main_status_col:
+
+    st.markdown(
+        "### MAIN ACCOUNT"
+    )
+
+
+    if MAIN_API_KEY:
+
+        st.success(
+            "MAIN API KEY: CONNECTED"
+        )
+
+    else:
+
+        st.warning(
+            "MAIN API KEY: NOT CONFIGURED"
+        )
+
+
+    if LIVE_TRADING:
+
+        st.error(
+            "REAL TRADING: ON"
+        )
+
+    else:
+
+        st.info(
+            "REAL TRADING: OFF / TEST MODE"
+        )
+
+
+# ============================================================
+# SUB EXCHANGE STATUS
+# ============================================================
+
+with sub_status_col:
+
+    st.markdown(
+        "### SUB ACCOUNT"
+    )
+
+
+    if SUB_API_KEY:
+
+        st.success(
+            "SUB API KEY: CONNECTED"
+        )
+
+    else:
+
+        st.warning(
+            "SUB API KEY: NOT CONFIGURED"
+        )
+
+
+    if LIVE_TRADING:
+
+        st.error(
+            "REAL TRADING: ON"
+        )
+
+    else:
+
+        st.info(
+            "REAL TRADING: OFF / TEST MODE"
+        )
+
+
+# ============================================================
+# EXCHANGE POSITION / ORDER DATA
+# ============================================================
+
+if LIVE_TRADING:
+
+    main_exchange_state = (
+        get_account_exchange_state(
+            MAIN_CLIENT
+        )
+    )
+
+
+    sub_exchange_state = (
+        get_account_exchange_state(
+            SUB_CLIENT
+        )
+    )
+
+
+else:
+
+    main_exchange_state = {
+
+        "positions":
+            [],
+
+        "orders":
+            [],
+
+        "position_error":
+            None,
+
+        "order_error":
+            None,
+    }
+
+
+    sub_exchange_state = {
+
+        "positions":
+            [],
+
+        "orders":
+            [],
+
+        "position_error":
+            None,
+
+        "order_error":
+            None,
+    }
+
+
+# ============================================================
+# EXCHANGE STATE EXPANDERS
+# ============================================================
+
+with st.expander(
+    "MAIN ACCOUNT — RAW DELTA POSITION / ORDER DATA"
+):
+
+    st.json(
+        main_exchange_state
+    )
+
+
+with st.expander(
+    "SUB ACCOUNT — RAW DELTA POSITION / ORDER DATA"
+):
+
+    st.json(
+        sub_exchange_state
+    )
+
+
+# ============================================================
+# GRID SETTINGS DISPLAY
+# ============================================================
+
+st.divider()
+
+
+st.markdown(
+    "## GRID SETTINGS"
+)
+
+
+settings_col1, settings_col2 = (
+    st.columns(2)
+)
+
+
+with settings_col1:
+
+    st.markdown(
+        "### MAIN ACCOUNT"
+    )
+
+
+    st.write(
+        f"Direction Mode: "
+        f"`{MAIN_DIRECTION_MODE}`"
+    )
+
+
+    st.write(
+        f"Grid Range: "
+        f"`{MAIN_GRID_RANGE_POINTS}` points"
+    )
+
+
+    st.write(
+        f"Grid Quantity: "
+        f"`{MAIN_GRID_QUANTITY}`"
+    )
+
+
+    st.write(
+        f"Automatic Grid Distance: "
+        f"`{MAIN_GRID_DISTANCE:.2f}` points"
+    )
+
+
+    st.write(
+        f"Order Quantity: "
+        f"`{MAIN_ORDER_QTY_BTC:.3f} BTC`"
+    )
+
+
+    st.write(
+        f"Order Contracts: "
+        f"`{MAIN_ORDER_CONTRACTS}`"
+    )
+
+
+    st.write(
+        f"Total Grid BTC: "
+        f"`{MAIN_TOTAL_BTC:.3f} BTC`"
+    )
+
+
+    st.write(
+        f"Total Grid Contracts: "
+        f"`{MAIN_TOTAL_CONTRACTS}`"
+    )
+
+
+with settings_col2:
+
+    st.markdown(
+        "### SUB ACCOUNT"
+    )
+
+
+    st.write(
+        f"Direction Mode: "
+        f"`{SUB_DIRECTION_MODE}`"
+    )
+
+
+    st.write(
+        f"Grid Range: "
+        f"`{SUB_GRID_RANGE_POINTS}` points"
+    )
+
+
+    st.write(
+        f"Grid Quantity: "
+        f"`{SUB_GRID_QUANTITY}`"
+    )
+
+
+    st.write(
+        f"Automatic Grid Distance: "
+        f"`{SUB_GRID_DISTANCE:.2f}` points"
+    )
+
+
+    st.write(
+        f"Order Quantity: "
+        f"`{SUB_ORDER_QTY_BTC:.3f} BTC`"
+    )
+
+
+    st.write(
+        f"Order Contracts: "
+        f"`{SUB_ORDER_CONTRACTS}`"
+    )
+
+
+    st.write(
+        f"Total Grid BTC: "
+        f"`{SUB_TOTAL_BTC:.3f} BTC`"
+    )
+
+
+    st.write(
+        f"Total Grid Contracts: "
+        f"`{SUB_TOTAL_CONTRACTS}`"
+    )
+
+
+# ============================================================
+# SUPERTREND SETTINGS
+# ============================================================
+
+st.divider()
+
+
+st.markdown(
+    "## SUPERTREND SETTINGS"
+)
+
+
+st.write(
+    f"Timeframe: "
+    f"`1 Hour`"
+)
+
+
+st.write(
+    f"ATR Length: "
+    f"`{SUPERTREND_ATR_LENGTH}`"
+)
+
+
+st.write(
+    f"Multiplier: "
+    f"`{SUPERTREND_MULTIPLIER}`"
+)
+
+
+st.write(
+    f"Source: "
+    f"`{SUPERTREND_SOURCE}`"
+)
+
+
+# ============================================================
+# LIVE MODE WARNING
+# ============================================================
+
+if LIVE_TRADING:
+
+    st.error(
+        """
+        ⚠️ REAL TRADING MODE ACTIVE
+
+        MAIN और SUB दोनों accounts पर real Delta
+        orders भेजे जा सकते हैं।
+
+        LIVE_TRADING को केवल पूरी testing के बाद ON करें।
+        """
+    )
+
+else:
+
+    st.success(
+        """
+        TEST MODE ACTIVE
+
+        LIVE_TRADING = False
+
+        अभी real Delta orders नहीं भेजे जा रहे हैं।
+        """
+    )
+
+
+# ============================================================
+# LAST UPDATE
+# ============================================================
+
+now_utc = pd.Timestamp.now(
+    tz="UTC"
+)
+
+
+try:
+
+    now_ist = (
+        now_utc
+        .tz_convert(
+            "Asia/Kolkata"
+        )
+        .strftime(
+            "%d-%m-%Y %H:%M:%S IST"
+        )
+    )
+
+except Exception:
+
+    now_ist = str(
+        now_utc
+    )
+
+
+st.caption(
+    f"Last Dashboard Update: {now_ist}"
+)
+
+
+# ============================================================
+# AUTO REFRESH
+# ============================================================
+
+if AUTO_REFRESH:
+
+    time.sleep(
+        POLL_SECONDS
+    )
+
+    st.rerun()
+
+
+# ============================================================
+# PART 4 READY
+# ============================================================
+
+PART_4_READY = True
