@@ -508,31 +508,50 @@ class DeltaClient:
     # CANDLES
     # ========================================================
 
-    def get_candles(
-        self,
-        resolution="1h",
-        limit=500,
-    ):
+    def get_candles(self, symbol="BTCUSD", resolution="1h", limit=500):
+    try:
+        end = int(time.time())
+
+        if resolution == "1h":
+            seconds_per_candle = 60 * 60
+        elif resolution == "30m":
+            seconds_per_candle = 30 * 60
+        elif resolution == "15m":
+            seconds_per_candle = 15 * 60
+        elif resolution == "5m":
+            seconds_per_candle = 5 * 60
+        elif resolution == "1m":
+            seconds_per_candle = 60
+        else:
+            seconds_per_candle = 60 * 60
+
+        start = end - (limit * seconds_per_candle)
 
         params = {
-
-            "symbol":
-                BTCUSD_SYMBOL,
-
-            "resolution":
-                resolution,
-
-            "limit":
-                min(int(limit), 2000),
+            "resolution": resolution,
+            "symbol": symbol,
+            "start": start,
+            "end": end,
         }
 
-        return self.public_request(
-
+        response = self.public_request(
             "GET",
-
             "/v2/history/candles",
-
             params=params,
+        )
+
+        result = response.get("result", [])
+
+        if not result:
+            raise ValueError(
+                "Delta API ने कोई candle data नहीं दिया."
+            )
+
+        return result
+
+    except Exception as e:
+        raise RuntimeError(
+            f"Candle API error: {e}"
         )
 
 
