@@ -83,13 +83,13 @@ CONTRACT_BTC = 0.001
 # ============================================================
 # OWNER ACCOUNT — SINGLE ACCOUNT SETTINGS
 # ============================================================
-OWNER_DEFAULT_QTY = float(os.getenv("GRID_ORDER_QTY", "0.001"))
+OWNER_DEFAULT_QTY = float(os.getenv("GRID_ORDER_QTY", "0.5"))
 if OWNER_DEFAULT_QTY <= 0:
-    OWNER_DEFAULT_QTY = 0.001
+    OWNER_DEFAULT_QTY = 0.5
 
 OWNER_GRID_QTY = st.number_input(
     "👑 OWNER ACCOUNT — GRID QUANTITY PER ORDER (BTC)",
-    min_value=0.001,
+    min_value=0.5,
     value=max(0.001, float(OWNER_DEFAULT_QTY)),
     step=0.001,
     format="%.3f",
