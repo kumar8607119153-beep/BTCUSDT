@@ -217,6 +217,34 @@ st.set_page_config(
     layout="wide"
 )
 
+# ============================================================
+# ADDITIVE DISPLAY-ONLY CSS — PREVENT FADED/DIMMED SCREEN DURING
+# st.rerun() / st.fragment REFRESH.
+# Streamlit dims "stale" elements with reduced opacity while a
+# rerun/fragment is in progress. This override forces full opacity
+# at all times. Refresh timing, order/target/grid logic, and API
+# calls are completely unchanged — only the dimming visual effect
+# is removed.
+# ============================================================
+st.markdown(
+    """
+    <style>
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] * ,
+    [data-testid="stVerticalBlock"],
+    [data-testid="stVerticalBlock"] *,
+    .main, .main * {
+        opacity: 1 !important;
+        transition: none !important;
+    }
+    [data-stale="true"] {
+        opacity: 1 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 # ============================================================
 # SUPERTREND REMOTE CONTROL — MAIN DASHBOARD (VISIBLE)
