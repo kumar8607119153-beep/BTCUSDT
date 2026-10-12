@@ -4295,6 +4295,8 @@ def _run_account_engine(account_id, account_api, account_qty_btc, render_output)
                         direction=grid_direction,
                         size=GRID_CHUNK_CONTRACTS
                     )
+                    # 🟢 Yahan par aapko ye line jodni hai:
+                    time.sleep(0.3)
                     mode = "LIMIT"
 
                     ok = (
