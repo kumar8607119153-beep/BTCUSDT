@@ -4269,7 +4269,7 @@ def _run_account_engine(account_id, account_api, account_qty_btc, render_output)
                                 )
                                 break
 
-                                        if entry_open:
+                    if entry_open:
                         startup_results.append(
                             f"L{level_no}=ALREADY"
                         )
