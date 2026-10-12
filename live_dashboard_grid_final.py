@@ -4592,43 +4592,44 @@ def _run_account_engine(account_id, account_api, account_qty_btc, render_output)
             st.session_state.get("grid_startup_armed_cycle", "")
             == new_cycle_key
         )
+        
 
-# ============================================================
-# 25-ORDERS STRICT QUOTA & ENFORCEMENT LOGIC
-# Exchange par hamesha exact 25 active orders (Entry + Target) hone chahiye
-# ============================================================
-_active_exchange_orders = [
-    o for o in grid_open_orders 
-    if _grid_is_bot(o) and str(o.get('state', '')).lower() in {'open', 'pending', 'active', 'partially_filled'}
-]
-_total_active_count = len(_active_exchange_orders)
+        # ============================================================
+        # 25-ORDERS STRICT QUOTA & ENFORCEMENT LOGIC
+        # Exchange par hamesha exact 25 active orders (Entry + Target) hone chahiye
+        # ============================================================
+        _active_exchange_orders = [
+            o for o in grid_open_orders 
+            if _grid_is_bot(o) and str(o.get('state', '')).lower() in {'open', 'pending', 'active', 'partially_filled'}
+        ]
+        _total_active_count = len(_active_exchange_orders)
 
-# Agar total active orders 25 se kam hain, toh bot turant check karke missing order wapas layega
-if _total_active_count < 25:
-    for level_no, price in pending_entry_levels:
-        price = float(price)
+        # Agar total active orders 25 se kam hain, toh bot turant check karke missing order wapas layega
+        if _total_active_count < 25:
+            for level_no, price in pending_entry_levels:
+                price = float(price)
         
-        entry_label = f"ENTRY_{_cycle_tag}_L{level_no}"
-        target_label = f"TARGET_{_cycle_tag}_L{level_no}"
+                entry_label = f"ENTRY_{_cycle_tag}_L{level_no}"
+                target_label = f"TARGET_{_cycle_tag}_L{level_no}"
         
-        has_entry = _grid_has_client_label(grid_open_orders, entry_label)
-        has_target = _grid_has_client_label(grid_open_orders, target_label)
+                has_entry = _grid_has_client_label(grid_open_orders, entry_label)
+                has_target = _grid_has_client_label(grid_open_orders, target_label)
         
-        # Agar target pehle se open hai ya entry bhari hui hai, toh use chhedna nahi hai
-        if has_target or has_entry:
-            continue
+                # Agar target pehle se open hai ya entry bhari hui hai, toh use chhedna nahi hai
+                if has_target or has_entry:
+                    continue
             
-        # Agar jagah khali hai aur total count 25 se kam hai, toh naya entry place kar do
-        if not has_entry and not has_target and _total_active_count < 25:
-            result = _grid_place_limit(
-                side=entry_side,
-                price=price,
-                label=entry_label,
-                direction=grid_direction,
-                size=GRID_CHUNK_CONTRACTS
-            )
-            if isinstance(result, dict) and result.get("success") is True:
-                _total_active_count += 1
+                # Agar jagah khali hai aur total count 25 se kam hai, toh naya entry place kar do
+                if not has_entry and not has_target and _total_active_count < 25:
+                    result = _grid_place_limit(
+                        side=entry_side,
+                        price=price,
+                        label=entry_label,
+                        direction=grid_direction,
+                        size=GRID_CHUNK_CONTRACTS
+                )
+                if isinstance(result, dict) and result.get("success") is True:
+                    _total_active_count += 1
 
 # ============================================================
 # MAIN PENDING ENTRY LEVELS LOOP (Line 4609)
