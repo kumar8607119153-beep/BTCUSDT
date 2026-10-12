@@ -4269,11 +4269,32 @@ def _run_account_engine(account_id, account_api, account_qty_btc, render_output)
                                 )
                                 break
 
-                    if entry_open or entry_filled:
+                                        if entry_open:
                         startup_results.append(
                             f"L{level_no}=ALREADY"
                         )
                         continue
+
+                    if entry_filled:
+                        startup_results.append(
+                            f"L{level_no}=FILLED"
+                        )
+                        # अगर एक्सचेंज पर एंट्री पहले ही भर चुकी है, 
+                        # तो तुरंत उसका टार्गेट ऑर्डर आगे बढ़ाएं
+                        target_price = _target_from_original_level(level_no, grid_direction)
+                        target_label = f"TARGET_{_cycle_tag}_L{level_no}"
+                        
+                        target_open = _grid_has_client_label(grid_open_orders, target_label)
+                        if not target_open:
+                            _grid_place_fixed_target(
+                                side=target_side,
+                                price=target_price,
+                                label=target_label,
+                                direction=grid_direction,
+                                size=GRID_CHUNK_CONTRACTS
+                            )
+                        continue
+
 
         
 
