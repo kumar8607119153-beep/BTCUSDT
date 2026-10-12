@@ -4275,12 +4275,7 @@ def _run_account_engine(account_id, account_api, account_qty_btc, render_output)
                         )
                         continue
 
-                    if level_no in grid_attempted_this_refresh:
-                        startup_results.append(
-                            f"L{level_no}=ALREADY"
-                        )
-                        continue
-                    grid_attempted_this_refresh.add(level_no)
+        
 
                     # 🟢 हर आर्डर के बीच 0.3 सेकंड का डिले और रिकवरी सपोर्ट
                     result = _grid_place_limit(
@@ -4708,8 +4703,7 @@ def _run_account_engine(account_id, account_api, account_qty_btc, render_output)
             if latest_role == "":
                 # Startup may have attempted this level earlier in THIS SAME
                 # refresh. Avoid a second attempt until the next refresh.
-                if level_no in grid_attempted_this_refresh:
-                    continue
+            
 
                 if not target_open and not reentry_open:
                     result = _grid_place_limit(
