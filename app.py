@@ -7,12 +7,12 @@ Execution: local simulated fills only. No authenticated/private order API is cal
 Agreed strategy encoded here:
 - XAUTUSD BUY / LONG: initial simulated position 330 lots.
 - PAXGUSD SELL / SHORT: initial simulated position 330 lots.
-- Each side is split into four target tranches: 176 lots at $5, 88 at $10,
-  44 at $20, and 22 at $40 from the actual initial fill price.
-- Each tranche closes only when its own target is crossed in the favorable
-  direction. The opposite instrument is never changed by that target.
-- After a tranche TP, it waits for price to return to its original entry price,
-  then re-enters the same tranche quantity and repeats.
+- Each side has 330 independently tracked one-lot target levels: 176 in Zone 1
+  ($5 target distance), 88 in Zone 2 ($10), 44 in Zone 3 ($20), and 22 in
+  Zone 4 ($40), measured from each level's simulated entry price.
+- Every level is managed independently; the opposite instrument is untouched.
+- After a level TP, that one lot waits for return to its original entry price,
+  then re-enters and repeats.
 - Separate leg P&L plus combined P&L.
 
 Important: this is a DEMO simulator. It polls the public ticker every 5 seconds;
@@ -43,7 +43,7 @@ REFRESH_SECONDS = 5
 CANDLE_RESOLUTION = "5m"
 CANDLE_COUNT = 120
 INITIAL_LOTS_PER_SIDE = 330
-STRATEGY_VERSION = 2
+STRATEGY_VERSION = 3
 LEVERAGE_DISPLAY = 100  # Display/planning assumption only; never applied to an order.
 
 # Exact ranges supplied in the conversation.
@@ -304,17 +304,21 @@ def safe_float(value: Any, default: float = 0.0) -> float:
 
 
 def make_target_tranches() -> List[dict]:
-    # Agreed split of the 330-lot initial position across the four TP distances.
-    return [
-        {"entry": None, "step": 5.0, "zone": 1, "lots": 176},
-        {"entry": None, "step": 10.0, "zone": 2, "lots": 88},
-        {"entry": None, "step": 20.0, "zone": 3, "lots": 44},
-        {"entry": None, "step": 40.0, "zone": 4, "lots": 22},
-    ]
+    """Create 330 separate one-lot target levels, not four aggregated rows."""
+    levels: List[dict] = []
+    level_no = 0
+    for zone, step, count in ((1, 5.0, 176), (2, 10.0, 88),
+                              (3, 20.0, 44), (4, 40.0, 22)):
+        for _ in range(count):
+            level_no += 1
+            levels.append({
+                "entry": None, "step": step, "zone": zone,
+                "level_no": level_no, "lots": 1,
+            })
+    return levels
 
 
-# The four target tranches are the actual position plan; no extra grid lots
-# are stacked on top of the 330-lot starting position.
+# 176 + 88 + 44 + 22 = 330 independent one-lot levels per instrument.
 XAUT_LEVELS = make_target_tranches()
 PAXG_LEVELS = make_target_tranches()
 
@@ -360,7 +364,7 @@ def start_initial_position(state: dict, current_price: float, direction: str) ->
         target = entry + item["step"] if direction == "long" else entry - item["step"]
         item.update(status="OPEN", entry_time=now_text, entry_price=entry, target=target)
         side = "BUY" if direction == "long" else "SELL"
-        add_event(state, f"Initial {side} · Zone {item['zone']} · {item['lots']} lots · TP ${target:,.4f}", entry, "OPEN")
+        add_event(state, f"Initial {side} · L{item['level_no']:03d} · Zone {item['zone']} · 1 lot · TP ${target:,.4f}", entry, "OPEN")
     state["initialized"] = True
     state["last_price"] = current_price
 
@@ -414,11 +418,11 @@ def process_leg(state: dict, current_price: float, product: dict, direction: str
             state["realized_fees"] += fee
             state["closed_trades"] += 1
             item.update(status="WAITING_REENTRY", last_exit=target, entry_time=None, target=None, cycles=item["cycles"] + 1)
-            add_event(state, f"{'BUY' if direction == 'long' else 'SELL'} TP hit · Zone {item['zone']} · {lots} lots · Re-entry waiting at ${entry:,.4f}", target, "PROFIT")
+            add_event(state, f"{'BUY' if direction == 'long' else 'SELL'} TP hit · L{item['level_no']:03d} · Zone {item['zone']} · {lots} lot · Re-entry waiting at ${entry:,.4f}", target, "PROFIT")
         elif reentry_hit:
             new_target = entry + item["step"] if direction == "long" else entry - item["step"]
             item.update(status="OPEN", entry_time=now_text, entry_price=entry, target=new_target)
-            add_event(state, f"{'BUY' if direction == 'long' else 'SELL'} re-entry · Zone {item['zone']} · {lots} lots · TP ${new_target:,.4f}", entry, "RE-ENTRY")
+            add_event(state, f"{'BUY' if direction == 'long' else 'SELL'} re-entry · L{item['level_no']:03d} · Zone {item['zone']} · {lots} lot · TP ${new_target:,.4f}", entry, "RE-ENTRY")
 
     state["last_price"] = current_price
 
@@ -676,13 +680,13 @@ def render_dashboard():
         st.markdown("#### 🟢 XAUT — BUY / LONG")
         st.metric("XAUT Net P&L", money(x_real_net + x_open - x_open_fees))
         st.write(f"Realized: **{money(x_real_net)}** · Open: **{money(x_open - x_open_fees)}**")
-        st.write(f"मौजूदा खुली मात्रा: **{x_open_lots} / 330 lots** · Active target tranches: **{x_open_count}**")
+        st.write(f"मौजूदा खुली मात्रा: **{x_open_lots} / 330 lots** · Active target levels: **{x_open_count} / 330**")
         st.write(f"TP cycles: **{xs['closed_trades']}** · Maker fee assumption: **{safe_float(x_product.get('maker_commission_rate')) * 100:.4f}%**")
     with b:
         st.markdown("#### 🔴 PAXG — SELL / SHORT")
         st.metric("PAXG Net P&L", money(p_real_net + p_open - p_open_fees))
         st.write(f"Realized: **{money(p_real_net)}** · Open: **{money(p_open - p_open_fees)}**")
-        st.write(f"मौजूदा खुली मात्रा: **{p_open_lots} / 330 lots** · Active target tranches: **{p_open_count}**")
+        st.write(f"मौजूदा खुली मात्रा: **{p_open_lots} / 330 lots** · Active target levels: **{p_open_count} / 330**")
         st.write(f"TP cycles: **{ps['closed_trades']}** · Maker fee assumption: **{safe_float(p_product.get('maker_commission_rate')) * 100:.4f}%**")
 
     st.markdown("### दोनों Live Charts · Entry और Active Target Lines")
@@ -719,7 +723,7 @@ def render_dashboard():
             else:
                 target_text, distance_text, status_text, open_qty = "—", "—", "NOT STARTED", 0
             rows.append({
-                "Target": f"Z{item['zone']} · {money(item['step'])}",
+                "Target": f"L{item['level_no']:03d} · Z{item['zone']} · {money(item['step'])}",
                 "खुली मात्रा": f"{open_qty} / {lots} lots",
                 "Target Price": target_text,
                 "मौजूदा भाव से दूरी": distance_text,
@@ -748,10 +752,10 @@ def render_dashboard():
             """
             - **केवल DEMO:** कोई API key/secret नहीं माँगा जाता और कोई real order नहीं भेजा जाता।
             - पहले valid live-price snapshot पर XAUT BUY 330 lots और PAXG SELL 330 lots की simulated starting positions बनती हैं।
-            - दोनों तरफ quantity का बँटवारा: $5 target = 176 lots, $10 = 88 lots, $20 = 44 lots, $40 = 22 lots।
-            - हर tranche का target उसी tranche के वास्तविक simulated entry price से तय होता है।
-            - जिस तरफ का target hit होगा, केवल उसी tranche की quantity बंद होगी; दूसरी तरफ की quantity जस की तस रहेगी।
-            - TP के बाद वही tranche अपने original entry price पर वापसी का इंतजार करती है और लौटने पर उसी quantity से दोबारा खुलती है।
+            - हर तरफ कुल 330 अलग-अलग one-lot target levels हैं: Zone 1 में 176 स्तर ($5 दूरी), Zone 2 में 88 ($10), Zone 3 में 44 ($20), और Zone 4 में 22 ($40)।
+            - हर level का target उसके अपने simulated entry price से तय होता है; सभी levels अलग-अलग track होते हैं।
+            - जिस तरफ का target hit होगा, केवल उसी one-lot level की quantity बंद होगी; दूसरी तरफ और बाकी levels जस के तस रहेंगे।
+            - TP के बाद वही level अपने original entry price पर वापसी का इंतजार करता है और लौटने पर एक lot से दोबारा खुलता है।
             - Demo polling हर 5 सेकंड में ticker snapshot लेती है। बीच में छूकर लौटे हुए price levels miss हो सकते हैं; इसलिए यह tick-perfect backtest नहीं है।
             - P&L contract_value और maker commission metadata से अनुमानित है। Funding, slippage, liquidation, margin scaling और partial fills शामिल नहीं हैं।
             - 100x सिर्फ आपकी planning assumption के रूप में दिखाया गया है; वास्तविक leverage/margin की पुष्टि इस Demo से नहीं होती।
